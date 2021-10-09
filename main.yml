@@ -5,10 +5,21 @@
   vars:
     ansible_python_interpreter: '{{ ansible_playbook_python }}'
     image_name: my-ruby-app 
-    image_tag: latest
+    image_tag: v1
     replicas: 2
 # Pre-Tasks to check if Minikube is running and start if not running
   pre_tasks:
+    - name: Get hash of the image_name if it already exists locally
+      shell: |
+        eval $(minikube docker-env)
+        docker images -q {{ image_name }}
+      register: image_hash
+      changed_when: false
+    - name: Build the image for the app using docker if it is not built already
+      shell: | 
+        eval $(minikube docker-env)
+        docker build -t {{ image_name }}:{{ image_tag }} .
+      when: not image_hash.stdout
     - name: Check Minikube's status.
       command: minikube status
       register: minikube_status
