@@ -1,8 +1,4 @@
-FROM ruby:latest
-WORKDIR /usr/src/app/
-
-COPY http_server.rb /usr/src/app/
-
+FROM ruby:2.5
 EXPOSE 80
-
-CMD ["ruby", "/usr/src/app/http_server.rb"]
+COPY http_server.rb .
+CMD ruby http_server.rb
