@@ -29,3 +29,66 @@
     - name: Starting minikube as it is not running
       command: minikube start
       when: "not minikube_status.stdout or 'Running' not in minikube_status.stdout"
+    # Create Kubernetes deployment for ruby web
+    - name: Create a deploy for ruby web
+      k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: ruby-web
+            namespace: default
+            labels:
+              app: ruby-web
+          spec:
+            replicas: "{{ replicas }}"
+            selector:
+              matchLabels:
+                app: ruby-web
+            template:
+              metadata:
+                labels:
+                  app: ruby-web
+              spec:
+                securityContext:
+                  capabilities:
+                    drop:
+                    - ALL
+                  runAsUser: 1000
+                  runAsGroup: 3000
+                  runAsNonRoot: true
+                containers:
+                - name: ruby-web
+                  image: "{{ image_name }}:{{ image_tag }}"
+                  livenessProbe:
+                    httpGet:
+                      path: /healthcheck
+                      port: 80
+                    initialDelaySeconds: 3
+                    periodSeconds: 3
+                  readinessProbe:
+                    httpGet:
+                      path: /healthcheck
+                      port: 80
+                  ports:
+                  - containerPort: 80        
+    # Create service to expose our ruby web
+    - name: create service for ruby web
+      k8s:
+        state: present
+        definition:
+          kind: Service
+          apiVersion: v1
+          metadata:
+            name: ruby-web
+            namespace: default
+          spec:
+            selector:
+              app: ruby-web
+            ports:
+            - protocol: TCP
+              port: 80
+              targetPort: 80
+              nodePort: 31000
+            type: LoadBalancer
